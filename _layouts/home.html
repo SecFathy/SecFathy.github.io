@@ -1,0 +1,23 @@
+---
+layout: default
+---
+
+<div class="home">
+  {{ content }}
+
+  <span class="h1"><a href="{{ "/" | relative_url }}">Articles</a></span>
+
+  <ul class="post-list">
+    {%- for post in site.posts -%}
+    <li class="post-item">
+      <div class="meta">
+        <time datetime="{{ post.date | date_to_xmlschema }}">{{ post.date | date: "%Y-%m-%d" }}</time>
+      </div>
+      <a href="{{ post.url | relative_url }}">{{ post.title | escape }}</a>
+      {%- if site.show_excerpts and post.excerpt -%}
+      <div class="excerpt">{{ post.excerpt | strip_html | truncate: 180 }}</div>
+      {%- endif -%}
+    </li>
+    {%- endfor -%}
+  </ul>
+</div>

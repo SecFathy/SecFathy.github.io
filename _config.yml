@@ -5,17 +5,31 @@ email: fathy@securehive.io
 baseurl: ""
 url: "https://secfathy.github.io"
 
-theme: minima
-minima:
-  skin: dark
-  social_links:
-    github: SecFathy
-
+# Custom theme (whiteglass / blog.orange.tw style). No gem theme.
 plugins:
   - jekyll-feed
   - jekyll-seo-tag
 
 show_excerpts: true
 
-header_pages:
-  - about.md
+# Pretty, orange.tw-style permalinks: /posts/2026-05-title/
+permalink: /posts/:year-:month-:title/
+
+nav:
+  - title: Articles
+    url: /
+  - title: About
+    url: /about/
+
+social:
+  github: SecFathy
+
+feed:
+  path: feed.xml
+
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - README.md
+  - vendor
+  - .bundle

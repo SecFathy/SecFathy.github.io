@@ -1,0 +1,130 @@
+---
+# Front matter so Jekyll processes this file.
+---
+
+/* ============================================================
+   whiteglass / blog.orange.tw–style theme
+   monospace, light, burnt-orange headings, orange+green links
+   ============================================================ */
+
+:root {
+  --bg: #fafafa;
+  --fg: #22272a;
+  --muted: #666;
+  --accent: #c61;       /* burnt orange — headings */
+  --link: #ff4500;      /* orange-red — links */
+  --underline: #44d62c; /* green — link underline */
+  --rule: #666;
+  --code-bg: #f0f0f0;
+  --max: 46rem;
+}
+
+* { box-sizing: border-box; }
+
+html { margin: 0; }
+
+body {
+  margin: 0;
+  padding: 0 1.25rem;
+  max-width: var(--max);
+  background-color: var(--bg);
+  color: var(--fg);
+  font-weight: 400;
+  font-size: 15px;
+  font-family: "Menlo", "Meslo LG", "SF Mono", "DejaVu Sans Mono", monospace;
+  line-height: 1.725;
+  text-rendering: geometricPrecision;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
+}
+
+.mx-auto { margin-left: auto; margin-right: auto; }
+
+/* ---------- headings ---------- */
+h1, .h1, h2, .h2, h3 { color: var(--accent); font-weight: 700; line-height: 1.3; }
+h4, h5, h6 { color: var(--muted); font-weight: 700; }
+h1, .h1 { font-size: 1.5rem; margin: 1.2rem 0 0.6rem; }
+h2, .h2 { font-size: 1.2rem; margin: 1.8rem 0 0.5rem; }
+h3 { font-size: 1.05rem; margin: 1.4rem 0 0.4rem; }
+
+/* ---------- links ---------- */
+a {
+  color: var(--link);
+  text-decoration: underline;
+  text-decoration-color: var(--underline);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 2px;
+}
+a:hover { text-decoration-color: var(--link); }
+
+/* ---------- rules ---------- */
+hr { border: 0; border-top: 1px dashed var(--rule); margin: 1.2rem 0; }
+
+/* ---------- header ---------- */
+#header { padding-top: 2rem; }
+#brand { text-decoration: none; }
+#brand h1 { margin: 0; font-size: 1.7rem; }
+.tagline { color: var(--muted); margin: 0.3rem 0 0.8rem; }
+#header nav a { margin-right: 1.1rem; font-weight: 700; }
+
+/* ---------- footer ---------- */
+#footer { margin: 3rem 0 2rem; color: var(--muted); font-size: 0.85rem; }
+#footer a { font-weight: 500; }
+
+/* ---------- post list (home) ---------- */
+.post-list { padding: 0; list-style: none; }
+.post-list .post-item { margin-bottom: 1.1rem; list-style-type: none; }
+.post-list .meta { display: block; color: var(--muted); font-weight: 700; font-size: 0.85rem; }
+.post-list .post-item > a { font-weight: 500; }
+.post-list .excerpt { color: var(--muted); font-size: 0.9rem; margin-top: 0.15rem; }
+.home .h1 a { color: var(--accent); text-decoration: none; }
+
+/* ---------- post page ---------- */
+.post-title { margin-bottom: 0.3rem; }
+.post-meta { color: var(--muted); font-weight: 700; font-size: 0.85rem; }
+.post-meta .tag { margin-left: 0.6rem; color: var(--accent); }
+.post-nav a { font-weight: 700; }
+
+/* ---------- content typography ---------- */
+.post-content p, .page p { margin: 0.9rem 0; }
+strong { color: var(--fg); font-weight: 700; }
+em, cite { font-style: italic; }
+blockquote {
+  margin: 1rem 0; padding: 0.1rem 1rem;
+  border-left: 3px dashed var(--rule); color: var(--muted);
+}
+
+ul, ol { line-height: 1.725; padding-left: 1.4rem; }
+li { margin: 0.2rem 0; }
+
+/* ---------- code ---------- */
+code {
+  background: var(--code-bg);
+  padding: 0.1em 0.35em;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+pre {
+  background: var(--code-bg);
+  padding: 0.9rem 1rem;
+  overflow-x: auto;
+  border-radius: 4px;
+  border: 1px dashed var(--rule);
+  line-height: 1.5;
+}
+pre code { background: none; padding: 0; font-size: 0.85rem; }
+
+/* ---------- tables ---------- */
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: 0.9rem; }
+th { border-bottom: 1px dashed var(--rule); color: var(--accent); text-align: left; padding: 0.4rem 0.6rem; }
+td { border-bottom: 1px dashed var(--rule); padding: 0.4rem 0.6rem; }
+
+/* ---------- images ---------- */
+img { max-width: 100%; height: auto; }
+
+/* ---------- responsive ---------- */
+@media (max-width: 600px) {
+  body { font-size: 14px; padding: 0 1rem; }
+  #brand h1 { font-size: 1.4rem; }
+  #header nav a { margin-right: 0.8rem; display: inline-block; }
+}
