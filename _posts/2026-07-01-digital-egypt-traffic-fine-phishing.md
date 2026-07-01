@@ -67,6 +67,16 @@ Fingerprinting the client-side code and server responses:
 - **Commercial PhaaS:** it has a licensing subsystem — this is rented/sold software, not bespoke. The kit source is **not** on public GitHub (its unique strings return zero results), consistent with a closed, licensed product.
 - **Operator language:** Chinese (config fields like `余额` = "balance", `填卡` = "card-fill", `红包` = "red-packet").
 
+**Recovered kit assets** (non-sensitive; bank-branded assets deliberately withheld):
+
+<p>
+  <img src="/assets/img/2026-07-01-digital-egypt/operator-gov-glyph.jpg" alt="Generic government-building glyph uploaded by the operator" width="90">
+  <img src="/assets/img/2026-07-01-digital-egypt/govsi-clone-placeholder.svg" alt="gov.si-clone template placeholder image" width="140">
+  <img src="/assets/img/2026-07-01-digital-egypt/kit-cardloading.svg" alt="Kit card-processing loading spinner" width="90">
+</p>
+
+*Left→right: generic gov glyph the operator uploaded; the `gov.si`-clone template's default placeholder; the kit's card-processing spinner shown during the "verification" step.*
+
 **Anti-analysis / evasion** built into the kit:
 - **Cloaking** via an IP-intelligence API (flags datacenter/VPN/crawler/abuser IPs) plus **mobile-only** and **country** gating — researchers and sandboxes get a 404 while real mobile victims get the page.
 - **Obfuscated, randomised URL base paths** and a decoy `/admin` that 404s.
@@ -75,14 +85,74 @@ Fingerprinting the client-side code and server responses:
 
 ## 5. Infrastructure
 
-Two throwaway command-and-control domains, **registered the same day, ~4.5 hours apart**, on the same cloud ASN — a clear single-operator batch deployment:
+This is not two domains — it's a **rotating cluster** run by a single operator across two Chinese clouds. Passive DNS / urlscan pivoting off the hosting IPs surfaces a new throwaway domain roughly **every few days since 2026-06-22**, each burned as it gets blocklisted. `digitalgovs.fun` is just the newest node.
 
-| Domain | Role | Registered | Registrar | Hosting |
-|---|---|---|---|---|
-| `digitalgovs.fun` | Lure + C2 (this campaign) | 2026-07-01 | NameSilo | Tencent Cloud (Singapore) |
-| `digittal.sbs` | Sibling C2 (same kit) | 2026-07-01 | NameMart | Tencent Cloud (Tokyo) |
+### 5.1 Hosting IPs
 
-Both: no mail (MX) records, DNSSEC unsigned, disposable TLDs, dedicated IPs, `GoFrame HTTP Server` behind Caddy.
+| IP | ASN / Provider | Country | Role |
+|---|---|---|---|
+| `43.160.201.83` | AS132203 Tencent Cloud (Aceville Pte) | Singapore | Primary lure + C2 |
+| `43.130.228.129` | AS132203 Tencent Cloud | Tokyo | Sibling C2 (`digittal.sbs`) |
+| `47.253.233.239` | AS45102 Alibaba Cloud US | USA (Charlottesville) | Secondary cluster node |
+
+### 5.2 Egypt-targeting domain rotation (`/eg` clone)
+
+| First seen | Domain | Landing | Hosting IP |
+|---|---|---|---|
+| 2026-06-22 | `digitalgov.ink` | `/` | `43.160.201.83` |
+| 2026-06-22 | `digitalgov.pics` | `/eg` | `43.160.201.83` |
+| 2026-06-24 | `digitalgov.rest` | `/eg` | `43.160.201.83` |
+| 2026-06-24 | `digitalgov.life` | `/` | `43.160.201.83` |
+| 2026-06-24 | `digitalgov.boats` | `/eg` | `47.253.233.239` |
+| 2026-06-29 | `digitalgovs.skin` | `/eg` | `47.253.233.239` |
+| 2026-06-30 | `digital.gov-eg.shop` | `/eg` | `47.253.233.239` |
+| 2026-07-01 | `digitalgovs.fun` | `/eg` | `43.160.201.83` |
+| 2026-07-01 | `digittal.sbs` | (sibling C2) | `43.130.228.129` |
+
+`digitalgovs.fun` and `digittal.sbs` were both registered **2026-07-01, ~4.5 hours apart** (NameSilo + NameMart) — a clear same-day batch deploy. All nodes: no mail (MX) records, DNSSEC unsigned, disposable TLDs, dedicated IPs, `GoFrame HTTP Server` behind Caddy, Let's Encrypt (`CN=YE1`) certs.
+
+### 5.3 Multi-country: same kit, different flag
+
+The same codebase and the same `43.160.201.83` IP also served a **France**-targeting sibling — `amendes-justiecsc-gov.eu.cc` (first seen 2026-06-29), impersonating French "amendes justice" (justice/traffic fines). Naming-pattern candidates suggesting **Uzbekistan** (`digitalgovuz.top`) and Russia-language variants exist but are **unverified** — do not blocklist `digitalgov*` blindly; most other hits are legitimate orgs.
+
+### 5.4 Operator dashboard / endpoint map
+
+The kit hides its real routes behind per-deployment **obfuscated base paths** (a decoy `/admin` 404s to throw off scanners). For `digitalgovs.fun`:
+
+| Route | Purpose |
+|---|---|
+| `https://digitalgovs.fun/eg` | Victim lure (mobile-cloaked) |
+| `https://digitalgovs.fun/jCCtXobKrd/admin/` | Operator dashboard SPA (Vue, JWT/`gtoken`-gated) |
+| `https://digitalgovs.fun/yYZIbqxAQy/api` | Victim-facing campaign-config API |
+| `https://digitalgovs.fun/yYZIbqxAQy/api/input` | HTTP exfil endpoint (POST) |
+| `wss://digitalgovs.fun/ws?token=<session>` | Live operator relay (real-time capture) |
+| `https://digitalgovs.fun/admin/` | Decoy — Caddy 404, 0-byte body |
+| `digittal.sbs` → `/BkKtetizxi/` | Sibling operator base path |
+
+The operator dashboard itself is **hardened** — JWT-gated, 57 endpoints all require auth, `alg:none` rejected, IP rate-limit + captcha + TOTP/Telegram 2FA, role-isolated socket. No unauthenticated path into the stored victim database was found (that requires server/panel seizure by law enforcement).
+
+### 5.5 Infrastructure at a glance
+
+```
+                 SMS lure (traffic fine)
+                          │
+                          ▼
+   ┌──────────── mobile victim ────────────┐
+   │  (desktop / datacenter / VPN → 404)   │
+   └───────────────────┬───────────────────┘
+                        ▼
+        digitalgovs.fun/eg  (Caddy → GoFrame)
+                        │  card + PII + OTP
+          ┌─────────────┴─────────────┐
+          ▼                           ▼
+   POST /…/api/input           wss://…/ws?token=  ── live ──▶  Operator dashboard
+   (HTTP fallback)             (real-time relay)              /jCCtXobKrd/admin/
+                                                              + Telegram notify
+          │
+          ▼
+   Anti-blocklist (防红) redirect hops ── launder link reputation
+   ipregistry cloaking · BIN allow/deny · country gate
+```
 
 ## 6. Notable Weaknesses in the Kit (high level)
 
@@ -95,27 +165,72 @@ Two design weaknesses are worth noting for defenders — described conceptually,
 
 ## 7. Indicators of Compromise (IOCs)
 
-**Domains**
+Defanged. Everything below is safe to block/hunt on; no working exploitation request is included.
+
+**Domains — Egypt cluster (high confidence)**
 - `digitalgovs.fun`
 - `digittal.sbs`
+- `digitalgov.ink`
+- `digitalgov.pics`
+- `digitalgov.rest`
+- `digitalgov.life`
+- `digitalgov.boats`
+- `digitalgovs.skin`
+- `digital.gov-eg.shop`
+
+**Domains — sibling / other-country (same kit + IP)**
+- `amendes-justiecsc-gov.eu.cc` (France — justice-fine lure)
+
+**Candidate related — UNVERIFIED, do not blindly block**
+- `digitalgovuz.top` (possible Uzbekistan), `digitalgov-safe.ru`, `digitalgov.ru`
+
+**Hosting IPs / ASN**
+- `43.160.201.83` — AS132203 Tencent Cloud, Singapore
+- `43.130.228.129` — AS132203 Tencent Cloud, Tokyo
+- `47.253.233.239` — AS45102 Alibaba Cloud, USA (Charlottesville)
+
+**Nameservers (NameSilo)**
+- `ns1.dnsowl.com`, `ns2.dnsowl.com`, `ns3.dnsowl.com`
 
 **Lure / infrastructure paths**
 - `hxxps://digitalgovs[.]fun/eg` (the fake traffic-fine lure)
-- Randomised obfuscated base paths for the operator panel and victim API (per-deployment)
+- `hxxps://digitalgovs[.]fun/jCCtXobKrd/admin/` (operator dashboard base — per-deployment)
+- `hxxps://digitalgovs[.]fun/yYZIbqxAQy/api` + `/api/input` (config + exfil — per-deployment)
+- `wss://digitalgovs[.]fun/ws?token=<session>` (live operator relay)
+- `digittal[.]sbs/BkKtetizxi/` (sibling operator base path)
 - Template path artifact: `/we003_si_etc_gov/` (cloned from `gov.si`)
 
-**Hosting**
-- `43.160.201.83` (Tencent Cloud, Singapore)
-- `43.130.228.129` (Tencent Cloud, Tokyo)
-- ASN AS132203 (Tencent Cloud)
+**Kit / TLS / server fingerprints**
+- Kit self-brand `Iron Man System` (钢铁侠) **v6.0.0**; `iron-man.png` favicon; `serverConfig.json` title "Iron Man System"
+- `server: GoFrame HTTP Server` + `via: 1.1 Caddy`
+- TLS issuer `Let's Encrypt CN=YE1`
+- `/eg` page body ETag `33746b336ed5dd450a5542c5d7ce4e55`
+- SPA bundle `/assets/index-39cef7f8.js`, stylesheet `/assets/index-f18ae053.css`
+- Hardcoded socket AES key string `your-secret-key` (kit default)
+- Cloned Egyptian-gov branding + hotlinked `digital.gov.eg/logoDark.svg`
 
 **Third-party services abused**
-- A BIN-lookup service (card routing), an IP-intelligence API (cloaking), a static-hosting provider (anti-blocklist redirects), and Telegram (operator exfil/notifications).
+- BIN-lookup service (card routing), `ipregistry` IP-intelligence API (cloaking), Vercel/static host (anti-blocklist `防红` redirects), Telegram (operator exfil/notifications), vendor CDN `img.haoeryu.top` (Cloudflare; template assets `e1`–`e8`).
 
-**Fingerprints**
-- Kit self-brand `Iron Man System` / 钢铁侠; `iron-man.png` favicon; `serverConfig.json` title "Iron Man System"
-- `server: GoFrame HTTP Server` + `via: 1.1 Caddy`
-- Cloned Egyptian-gov branding + hotlinked `digital.gov.eg/logoDark.svg`
+### 7.1 Consolidated blocklist (copy-paste)
+
+```
+# domains — Egypt cluster + FR sibling
+digitalgovs.fun
+digittal.sbs
+digitalgov.ink
+digitalgov.pics
+digitalgov.rest
+digitalgov.life
+digitalgov.boats
+digitalgovs.skin
+digital.gov-eg.shop
+amendes-justiecsc-gov.eu.cc
+# hosting IPs
+43.160.201.83
+43.130.228.129
+47.253.233.239
+```
 
 ## 8. Guidance
 
