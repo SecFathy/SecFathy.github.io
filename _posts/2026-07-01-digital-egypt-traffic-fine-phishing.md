@@ -299,7 +299,52 @@ amendes-justiecsc-gov.eu.cc
 - Watch for real-time fraud patterns (card auth immediately followed by an OTP prompt) originating around these domains.
 - Treat this as part of the broader Chinese live-interception PhaaS wave (Darcula / YYlaiyu / Haozi lineage).
 
-## 10. Responsible Disclosure
+## 10. IOC Table (SOC quick-reference)
+
+Defanged, single-table view for triage / detection engineering. `[.]` = de-fanged dot; treat obfuscated base paths as **per-deployment** (fingerprint the pattern, not the exact string).
+
+| # | Type | Indicator | Context | Confidence |
+|---|---|---|---|---|
+| 1 | domain | `digitalgovs[.]fun` | Active lure + C2 (this campaign) | High |
+| 2 | domain | `digittal[.]sbs` | Sibling C2 / lure link in SMS | High |
+| 3 | domain | `digitalgov[.]ink` | Cluster node (2026-06-22) | High |
+| 4 | domain | `digitalgov[.]pics` | Cluster node (2026-06-22) | High |
+| 5 | domain | `digitalgov[.]rest` | Cluster node (2026-06-24) | High |
+| 6 | domain | `digitalgov[.]life` | Cluster node (2026-06-24) | High |
+| 7 | domain | `digitalgov[.]boats` | Cluster node (2026-06-24) | High |
+| 8 | domain | `digitalgovs[.]skin` | Cluster node (2026-06-29) | High |
+| 9 | domain | `digital[.]gov-eg[.]shop` | Cluster node (2026-06-30) | High |
+| 10 | domain | `amendes-justiecsc-gov[.]eu[.]cc` | France sibling (same kit + IP) | High |
+| 11 | domain | `digitalgovuz[.]top` | Possible Uzbekistan variant | Low (unverified) |
+| 12 | domain | `digitalgov-safe[.]ru`, `digitalgov[.]ru` | Possible RU variants | Low (unverified) |
+| 13 | ipv4 | `43[.]160[.]201[.]83` | Tencent Cloud SG (AS132203) — primary C2 | High |
+| 14 | ipv4 | `43[.]130[.]228[.]129` | Tencent Cloud Tokyo (AS132203) — sibling C2 | High |
+| 15 | ipv4 | `47[.]253[.]233[.]239` | Alibaba Cloud US (AS45102) — cluster node | High |
+| 16 | asn | `AS132203` / `AS45102` | Tencent / Alibaba hosting | Medium |
+| 17 | url | `hxxps://digitalgovs[.]fun/eg` | Fake traffic-fine lure landing | High |
+| 18 | url | `hxxps://digittal[.]sbs/AvVGcmoPXY` | Lure link delivered in SMS | High |
+| 19 | url-path | `/jCCtXobKrd/admin/` | Operator dashboard base (per-deploy) | Medium |
+| 20 | url-path | `/yYZIbqxAQy/api` + `/api/input` | Config + exfil endpoints (per-deploy) | Medium |
+| 21 | url-path | `/BkKtetizxi/` | Sibling operator base (`digittal.sbs`) | Medium |
+| 22 | url-path | `/we003_si_etc_gov/` | `gov.si`-clone template artifact | High |
+| 23 | ws | `wss://<host>/ws?token=<uuid>` | Live operator relay / real-time exfil | High |
+| 24 | msisdn | `+212 7 79 79 47 62` | SMS sender (spoofable — sample only) | Low |
+| 25 | nameserver | `ns1/ns2/ns3.dnsowl.com` (NameSilo) | `digitalgovs.fun` NS | Medium |
+| 26 | nameserver | `NS1/NS2.DOMAINNAMENS.COM` (NameMart) | `digittal.sbs` NS | Medium |
+| 27 | http-header | `server: GoFrame HTTP Server` + `via: 1.1 Caddy` | Kit stack fingerprint | Medium |
+| 28 | tls | `Let's Encrypt CN=YE1` | Cert issuer on cluster nodes | Low |
+| 29 | http-etag | `33746b336ed5dd450a5542c5d7ce4e55` | `/eg` page body ETag | Medium |
+| 30 | file | `/assets/index-39cef7f8.js`, `index-f18ae053.css` | Lure SPA bundle / stylesheet | Medium |
+| 31 | favicon | `iron-man.png` | Kit self-brand "Iron Man System" v6.0.0 | Medium |
+| 32 | string | `your-secret-key` | Hardcoded socket AES passphrase (kit default) | Medium |
+| 33 | service | `bincheck.io` | BIN lookup on stolen cards | Medium |
+| 34 | service | `api.ipregistry.co` | Cloaking / IP-intel gating | Medium |
+| 35 | service | `img.haoeryu.top` (Cloudflare) | Kit-vendor CDN (templates `e1`–`e8`) | Medium |
+| 36 | ttp | Card auth immediately followed by OTP prompt | Live-interception fraud pattern | — |
+
+**Detection tips:** alert on card-BIN queries to `bincheck.io` from customer sessions you don't originate; hunt web logs for the `GoFrame`+`Caddy` header combo on `.fun`/`.sbs`/`.shop` hosts; watch CT logs + both Tencent IPs for the next rotated `digitalgov*` domain.
+
+## 11. Responsible Disclosure
 
 The impersonated national brand / CERT, the affected bank's fraud team, the hosting provider, and the registrars were notified via abuse channels prior to publication. This post intentionally omits exploitation steps and any captured data. Its purpose is defensive: to warn potential victims and help other responders identify and take down related infrastructure.
 
