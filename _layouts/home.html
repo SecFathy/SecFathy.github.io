@@ -7,6 +7,10 @@ layout: default
 
   <span class="h1"><a href="{{ "/" | relative_url }}">Articles</a></span>
 
+  {%- if site.posts.size == 0 -%}
+  <p class="empty">No articles yet.</p>
+  {%- endif -%}
+
   <ul class="post-list">
     {%- for post in site.posts -%}
     <li class="post-item">

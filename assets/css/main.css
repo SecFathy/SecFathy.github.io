@@ -9,13 +9,13 @@
 
 :root {
   --bg: #fafafa;
-  --fg: #22272a;
+  --fg: #1a1a1a;
   --muted: #666;
-  --accent: #c61;       /* burnt orange — headings */
-  --link: #ff4500;      /* orange-red — links */
-  --underline: #44d62c; /* green — link underline */
-  --rule: #666;
-  --code-bg: #f0f0f0;
+  --accent: #000;       /* black — headings */
+  --link: #000;         /* black — links */
+  --underline: #999;    /* grey — link underline */
+  --rule: #000;
+  --code-bg: #eee;
   --max: 46rem;
 }
 
