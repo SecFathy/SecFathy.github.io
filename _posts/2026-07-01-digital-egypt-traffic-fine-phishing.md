@@ -20,7 +20,23 @@ If you receive an SMS about a "traffic fine" with a payment link: **it's a scam.
 
 ---
 
-## 1. The Lure
+## 1. How It Starts — the SMS / RCS Blast
+
+The campaign opens with an unsolicited text message. Victims receive an Arabic SMS/RCS message claiming the "Automated Traffic Monitoring System" recorded a violation by a vehicle registered in their name, citing **Traffic Law 66/1973**, threatening account/asset freezes, and pushing the same **"50% early-payment discount within 24 hours"** urgency hook. It ends with a payment link and — in RCS form — an interactive *"reply 1 to view the violation photos and geolocation"* prompt to boost engagement.
+
+<p align="center">
+  <img src="/assets/img/2026-07-01-digital-egypt/lure-sms-rcs.jpg" alt="Phishing SMS/RCS impersonating Egyptian traffic authority, linking to digittal.sbs" width="300">
+</p>
+
+*Real lure message (victim-reported). Note the sender is a **+212 (Morocco)** mobile number — not an Egyptian government shortcode — and the link points to `digittal[.]sbs/AvVGcmoPXY`, one of the cluster domains. iOS already flags it "may be spam."*
+
+Message body (transcribed, Arabic):
+
+> سجّل نظام المراقبة الآلي للمرور مخالفة لأحكام قانون المرور ارتكبتها المركبة المسجلة باسمكم. وفقاً لقانون المرور رقم 66 لسنة 1973 وتعديلاته … ميزة السداد المبكر – خصم 50% خلال 24 ساعة من استلام هذا الإشعار … رابط الاستئناف والدفع: `hxxps://digittal[.]sbs/AvVGcmoPXY`
+
+**Red flags in the message itself:** foreign (`+212`) sender, a government "service" on a random `.sbs` link, threats + a countdown discount, and an RCS "reply 1" hook. Egyptian authorities do not collect fines this way.
+
+## 2. The Lure
 
 Victims land on a mobile-only page that renders as an Egyptian government portal:
 
@@ -31,23 +47,42 @@ Victims land on a mobile-only page that renders as an Egyptian government portal
 
 Interestingly, the underlying HTML template was **cloned from an unrelated government portal (`gov.si`, Slovenia)** — a residual `lang="sl"` and template path give it away — then rebranded into Arabic. Template reuse across countries is a hallmark of this PhaaS family.
 
-## 2. The Harvest Flow
+## 3. The Harvest Flow
 
 The victim is walked through a multi-step funnel:
 
 ```
 Lure (fake traffic-fine)  →  enter vehicle plate ("inquire about the violation")
+   →  owner-data form (full name, national ID, address, city, phone, email)
    →  card entry (number, name, expiry, CVV)   → BIN lookup for card routing
    →  OTP / authenticator / QR "verification"   (live interception step)
-   →  "payment" + address details               (name, address, phone, email)
-   →  "success"
+   →  "payment"                                 → "success"
 ```
 
-Data captured across the flow includes: card number, cardholder name, expiry, CVV, BIN-derived metadata, OTP, PIN, full name, address, city, phone, and email — plus a running history of every card attempt.
+The screens, step by step (reconstruction below — **not** the live site; rebuilt from the recovered client bundle so no attacker infrastructure was contacted and no victim ever sees these here):
+
+<p align="center">
+  <img src="/assets/img/2026-07-01-digital-egypt/harvest-flow-reconstruction.png" alt="Four-step reconstruction: fake fine notice, plate inquiry, full-PII form, card entry" width="100%">
+</p>
+
+1. **Fine notice** — the fake violation + 50% discount countdown; a single "الاستعلام عن المخالفة" (inquire about the violation) button.
+2. **Plate inquiry** — victim enters their vehicle **plate number** ("رقم لوحة المركبة") to "look up the violation." This makes it feel real and confirms a live target.
+3. **Owner-data form ("بيانات مالك المركبة")** — framed as *identity verification only, "no charges until the next step"* to lower guard. Harvests **full name, national ID (الرقم القومي), address, city, postal code, phone, email**.
+4. **Payment** — card number, cardholder name, expiry, CVV — then the OTP/authenticator/QR "verification" step.
+
+Data captured across the flow: card number, cardholder name, expiry, CVV, BIN-derived metadata, OTP, PIN, full name, national ID, address, city, postal code, phone, and email — plus a running **history of every card attempt** (`cardHistory[]`).
+
+### 3.1 What happens when the card is entered (technical)
+
+Card submission is not passive collection — the kit **enriches and validates** on the spot:
+
+- **BIN lookup.** The first 6–8 digits are sent to a **BIN-lookup service** (observed: `bincheck.io`) to resolve the card's **scheme / type / issuing bank / country**. This lets the operator route the card, apply the campaign's **BIN allow/deny** rules, and — critically — pick the **matching bank-branded OTP page** for the next step.
+- **Validation-type branching.** The kit's config carries multiple verification templates and drops the victim onto one of them: `otpValid1` (6-digit SMS OTP), `appValid1` (banking-app "approve this login" push), or `scanValid1` (QR-scan + screenshot upload). Same funnel, three ways to defeat 2FA.
+- **Live relay.** Each field (`cardNumber`, `cardHolder`, `expires`, `cvv`, `cardBIN`, later `otp`/`pin`) is pushed in real time over `wss://…/ws?token=<uuid>` to the operator console (JSON events `submit_card` / `input_text`), with a Telegram notification. Socket payloads are AES-encrypted client-side using the kit's **hardcoded default passphrase** `your-secret-key`.
 
 Crucially, this is a **live-interception** kit: submissions surface on the operator's console in **real time**, so an operator can trigger a genuine transaction on the victim's card and then present a fake OTP page to capture the one-time code seconds before it expires — defeating OTP-based 2FA and even app/QR verification. This is the same technique recent reporting attributes to Chinese PhaaS families (Darcula/Magic Cat, YYlaiyu, Lighthouse, Haozi/"Magic Mouse", ByteDance Live Panel).
 
-## 3. Bank-Targeted OTP Interception
+## 4. Bank-Targeted OTP Interception
 
 The campaign configuration contains a **dedicated, bank-branded OTP-interception page** for **a major Egyptian bank** (identity withheld). It:
 
@@ -58,7 +93,7 @@ The campaign configuration contains a **dedicated, bank-branded OTP-interception
 
 In other words, after the card is stolen the kit selectively impersonates the victim's own bank to phish the live OTP — targeted, real-time card fraud.
 
-## 4. Kit Identification — "Iron Man System" (钢铁侠)
+## 5. Kit Identification — "Iron Man System" (钢铁侠)
 
 Fingerprinting the client-side code and server responses:
 
@@ -83,11 +118,11 @@ Fingerprinting the client-side code and server responses:
 - An **anti-blocklist ("防红") redirect layer** that spins up disposable clean-reputation redirect hops to launder link reputation before the landing domain.
 - **BIN + country allow/deny** filtering.
 
-## 5. Infrastructure
+## 6. Infrastructure
 
 This is not two domains — it's a **rotating cluster** run by a single operator across two Chinese clouds. Passive DNS / urlscan pivoting off the hosting IPs surfaces a new throwaway domain roughly **every few days since 2026-06-22**, each burned as it gets blocklisted. `digitalgovs.fun` is just the newest node.
 
-### 5.1 Hosting IPs
+### 6.1 Hosting IPs
 
 | IP | ASN / Provider | Country | Role |
 |---|---|---|---|
@@ -95,7 +130,23 @@ This is not two domains — it's a **rotating cluster** run by a single operator
 | `43.130.228.129` | AS132203 Tencent Cloud | Tokyo | Sibling C2 (`digittal.sbs`) |
 | `47.253.233.239` | AS45102 Alibaba Cloud US | USA (Charlottesville) | Secondary cluster node |
 
-### 5.2 Egypt-targeting domain rotation (`/eg` clone)
+### 6.2 Domain registration history (WHOIS)
+
+The two 2026-07-01 nodes were registered **the same morning, ~4.5 hours apart**, on different registrars — cheap disposable TLDs, privacy-protected, DNSSEC unsigned, no mail. Exact registry records:
+
+| Field | `digitalgovs.fun` | `digittal.sbs` |
+|---|---|---|
+| Creation (UTC) | `2026-07-01T07:05:13Z` | `2026-07-01T11:34:01Z` |
+| Registry expiry | `2027-07-01` | `2027-07-01` |
+| Registrar | NameSilo, LLC (IANA 1479) | NameMart Pte. Ltd. |
+| Registrar abuse | `abuse@namesilo.com` | (NameMart abuse) |
+| Nameservers | `ns1/ns2/ns3.dnsowl.com` | `NS1/NS2.DOMAINNAMENS.COM` |
+| DNSSEC | unsigned | unsigned |
+| MX (mail) | none | none |
+
+The **~4h29m registration gap**, dedicated IPs on the same ASN, and identical kit build across both = a single operator batch-provisioning the day's infrastructure. The wider Egypt cluster (below) shows the same pattern stretching back to **2026-06-22** — new domain every few days as older ones get blocklisted (`.ink .pics .rest .life .boats .skin .shop .fun`).
+
+### 6.3 Egypt-targeting domain rotation (`/eg` clone)
 
 | First seen | Domain | Landing | Hosting IP |
 |---|---|---|---|
@@ -111,11 +162,11 @@ This is not two domains — it's a **rotating cluster** run by a single operator
 
 `digitalgovs.fun` and `digittal.sbs` were both registered **2026-07-01, ~4.5 hours apart** (NameSilo + NameMart) — a clear same-day batch deploy. All nodes: no mail (MX) records, DNSSEC unsigned, disposable TLDs, dedicated IPs, `GoFrame HTTP Server` behind Caddy, Let's Encrypt (`CN=YE1`) certs.
 
-### 5.3 Multi-country: same kit, different flag
+### 6.4 Multi-country: same kit, different flag
 
 The same codebase and the same `43.160.201.83` IP also served a **France**-targeting sibling — `amendes-justiecsc-gov.eu.cc` (first seen 2026-06-29), impersonating French "amendes justice" (justice/traffic fines). Naming-pattern candidates suggesting **Uzbekistan** (`digitalgovuz.top`) and Russia-language variants exist but are **unverified** — do not blocklist `digitalgov*` blindly; most other hits are legitimate orgs.
 
-### 5.4 Operator dashboard / endpoint map
+### 6.5 Operator dashboard / endpoint map
 
 The kit hides its real routes behind per-deployment **obfuscated base paths** (a decoy `/admin` 404s to throw off scanners). For `digitalgovs.fun`:
 
@@ -131,7 +182,7 @@ The kit hides its real routes behind per-deployment **obfuscated base paths** (a
 
 The operator dashboard itself is **hardened** — JWT-gated, 57 endpoints all require auth, `alg:none` rejected, IP rate-limit + captcha + TOTP/Telegram 2FA, role-isolated socket. No unauthenticated path into the stored victim database was found (that requires server/panel seizure by law enforcement).
 
-### 5.5 Infrastructure at a glance
+### 6.6 Infrastructure at a glance
 
 ```
                  SMS lure (traffic fine)
@@ -154,7 +205,7 @@ The operator dashboard itself is **hardened** — JWT-gated, 57 endpoints all re
    ipregistry cloaking · BIN allow/deny · country gate
 ```
 
-## 6. Notable Weaknesses in the Kit (high level)
+## 7. Notable Weaknesses in the Kit (high level)
 
 Two design weaknesses are worth noting for defenders — described conceptually, without exploitation detail:
 
@@ -163,9 +214,13 @@ Two design weaknesses are worth noting for defenders — described conceptually,
 
 *(No proof-of-concept, request syntax, or captured records are published. Real victim data was never accessed.)*
 
-## 7. Indicators of Compromise (IOCs)
+## 8. Indicators of Compromise (IOCs)
 
 Defanged. Everything below is safe to block/hunt on; no working exploitation request is included.
+
+**Lure delivery**
+- Sender number (this sample): `+212 7 79 79 47 62` (Morocco mobile — spoofable; treat as sample, not a fixed IOC)
+- Lure link in message: `hxxps://digittal[.]sbs/AvVGcmoPXY`
 
 **Domains — Egypt cluster (high confidence)**
 - `digitalgovs.fun`
@@ -212,7 +267,7 @@ Defanged. Everything below is safe to block/hunt on; no working exploitation req
 **Third-party services abused**
 - BIN-lookup service (card routing), `ipregistry` IP-intelligence API (cloaking), Vercel/static host (anti-blocklist `防红` redirects), Telegram (operator exfil/notifications), vendor CDN `img.haoeryu.top` (Cloudflare; template assets `e1`–`e8`).
 
-### 7.1 Consolidated blocklist (copy-paste)
+### 8.1 Consolidated blocklist (copy-paste)
 
 ```
 # domains — Egypt cluster + FR sibling
@@ -232,7 +287,7 @@ amendes-justiecsc-gov.eu.cc
 47.253.233.239
 ```
 
-## 8. Guidance
+## 9. Guidance
 
 **For the public**
 - The Egyptian government does **not** collect traffic fines via card payment on `.fun` / `.sbs` links sent by SMS.
@@ -244,7 +299,7 @@ amendes-justiecsc-gov.eu.cc
 - Watch for real-time fraud patterns (card auth immediately followed by an OTP prompt) originating around these domains.
 - Treat this as part of the broader Chinese live-interception PhaaS wave (Darcula / YYlaiyu / Haozi lineage).
 
-## 9. Responsible Disclosure
+## 10. Responsible Disclosure
 
 The impersonated national brand / CERT, the affected bank's fraud team, the hosting provider, and the registrars were notified via abuse channels prior to publication. This post intentionally omits exploitation steps and any captured data. Its purpose is defensive: to warn potential victims and help other responders identify and take down related infrastructure.
 
