@@ -11,4 +11,4 @@ This blog holds field notes: pentest write-ups, detection engineering, and
 CERT-style analysis of activity targeting critical infrastructure.
 
 - GitHub: [SecFathy](https://github.com/SecFathy)
-- Email: fathy@securehive.io
+- Email: [secfathy@gmail.com](mailto:secfathy@gmail.com)
