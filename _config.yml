@@ -1,0 +1,21 @@
+title: Mohammed Fathy
+description: Security Engineer — notes on offensive security, threat intel, and incident response.
+author: Mohammed Fathy
+email: fathy@securehive.io
+baseurl: ""
+url: "https://secfathy.github.io"
+
+theme: minima
+minima:
+  skin: dark
+  social_links:
+    github: SecFathy
+
+plugins:
+  - jekyll-feed
+  - jekyll-seo-tag
+
+show_excerpts: true
+
+header_pages:
+  - about.md
