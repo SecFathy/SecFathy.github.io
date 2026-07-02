@@ -122,6 +122,10 @@ td { border-bottom: 1px dashed var(--rule); padding: 0.4rem 0.6rem; }
 /* ---------- images ---------- */
 img { max-width: 100%; height: auto; }
 
+/* ---------- comments ---------- */
+.comments { margin-top: 2rem; }
+.comments-title { font-size: 1.1rem; color: var(--accent); margin-bottom: 1rem; }
+
 /* ---------- responsive ---------- */
 @media (max-width: 600px) {
   body { font-size: 14px; padding: 0 1rem; }

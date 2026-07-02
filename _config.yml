@@ -24,6 +24,19 @@ nav:
 social:
   github: SecFathy
 
+# Giscus comments (GitHub Discussions). Fill repo_id + category_id from https://giscus.app
+# Set enabled: false to hide comments site-wide.
+giscus:
+  enabled: true
+  repo: "SecFathy/SecFathy.github.io"
+  repo_id: "R_kgDOQABGaA"
+  category: "Announcements"
+  category_id: "DIC_kwDOQABGaA4Cabcd"
+  mapping: "pathname"
+  reactions_enabled: "1"
+  theme: "preferred_color_scheme"
+  lang: "en"
+
 feed:
   path: feed.xml
 
