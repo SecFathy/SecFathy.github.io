@@ -24,18 +24,15 @@ nav:
 social:
   github: SecFathy
 
-# Giscus comments (GitHub Discussions). Fill repo_id + category_id from https://giscus.app
+# utterances comments (GitHub Issues). No IDs needed.
+# Just install the app: https://github.com/apps/utterances -> pick this repo.
 # Set enabled: false to hide comments site-wide.
-giscus:
+utterances:
   enabled: true
   repo: "SecFathy/SecFathy.github.io"
-  repo_id: "R_kgDOQABGaA"
-  category: "Announcements"
-  category_id: "DIC_kwDOQABGaA4Cabcd"
-  mapping: "pathname"
-  reactions_enabled: "1"
-  theme: "preferred_color_scheme"
-  lang: "en"
+  issue_term: "pathname"
+  label: "comment"
+  theme: "preferred-color-scheme"
 
 feed:
   path: feed.xml
